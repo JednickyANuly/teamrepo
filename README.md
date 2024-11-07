@@ -1,0 +1,1 @@
+# informace ke kroužku
