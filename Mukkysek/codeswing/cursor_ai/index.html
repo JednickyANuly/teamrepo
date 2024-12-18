@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vánoční Plinko</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(to bottom, #1a2a6c, #b21f1f);
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 1000px;
+            height: 800px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pin {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        .present {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: none;
+            font-size: 24px;
+            text-align: center;
+            line-height: 30px;
+            user-select: none;
+            z-index: 2;
+        }
+
+        .slot {
+            position: absolute;
+            bottom: 0;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        #drop-button {
+            margin: 20px;
+            padding: 15px 30px;
+            font-size: 24px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #drop-button:hover {
+            transform: scale(1.05);
+            background: #ff6666;
+        }
+
+        .score {
+            font-size: 32px;
+            margin: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .value-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 10px;
+        }
+
+        .value-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #4444ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .value-button:hover {
+            transform: scale(1.05);
+            background: #6666ff;
+        }
+
+        .value-button.selected {
+            background: #8888ff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="score">Body: <span id="score">1000</span></div>
+    <div class="value-buttons">
+        <button class="value-button selected" data-value="100">100 bodů</button>
+        <button class="value-button" data-value="500">500 bodů</button>
+        <button class="value-button" data-value="1000">1000 bodů</button>
+    </div>
+    <button id="drop-button">Pustit dárek 🎁</button>
+    <div id="game-container"></div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const dropButton = document.getElementById('drop-button');
+        const scoreElement = document.getElementById('score');
+        const valueButtons = document.querySelectorAll('.value-button');
+        let score = 1000;
+        let selectedValue = 100;
+        scoreElement.textContent = score;
+
+        // Výběr hodnoty dárku
+        valueButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                valueButtons.forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                selectedValue = parseInt(button.dataset.value);
+                updateDropButton();
+            });
+        });
+
+        function updateDropButton() {
+            dropButton.textContent = `Pustit dárek 🎁 (-${selectedValue} bodů)`;
+        }
+        updateDropButton();
+
+        // Vytvoření větší pyramidy s tečkami
+        const rows = 12;
+        const presents = ['🎁', '🎄', '🎅', '🦌'];
+
+        for (let i = 0; i < rows; i++) {
+            const pinsInRow = i + 1;
+            const spacing = 70; // Menší mezera mezi piny pro více pinů
+            const rowWidth = spacing * (pinsInRow - 1);
+            const startX = (container.offsetWidth - rowWidth) / 2;
+
+            for (let j = 0; j < pinsInRow; j++) {
+                const pin = document.createElement('div');
+                pin.className = 'pin';
+                pin.style.left = `${startX + j * spacing}px`;
+                pin.style.top = `${150 + i * 50}px`; // Menší vertikální mezera
+                container.appendChild(pin);
+            }
+        }
+
+        // Vytvoření slotů - hodnoty jsou nyní násobitele
+        const slotValues = [0.5, 0.8, 1.2, 1.5, 2, 3, 2, 1.5, 1.2, 0.8, 0.5];
+        slotValues.forEach((value, index) => {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.textContent = `x${value}`;
+            const slotWidth = container.offsetWidth / slotValues.length;
+            slot.style.left = `${index * slotWidth}px`;
+            slot.style.width = `${slotWidth}px`;
+            container.appendChild(slot);
+        });
+
+        function createPresent() {
+            if (score < selectedValue) {
+                alert(`Nemáte dostatek bodů! Potřebujete ${selectedValue} bodů.`);
+                return;
+            }
+
+            score -= selectedValue;
+            scoreElement.textContent = score;
+
+            const present = document.createElement('div');
+            present.className = 'present';
+            present.textContent = presents[Math.floor(Math.random() * presents.length)];
+            present.style.left = `${container.offsetWidth / 2}px`;
+            present.style.top = '0px';
+            container.appendChild(present);
+
+            let posX = parseFloat(present.style.left);
+            let posY = 0;
+            let velocityX = (Math.random() - 0.5) * 1.5; // Větší počáteční rychlost
+            let velocityY = 0;
+
+            function animate() {
+                velocityY += 0.2;
+                posY += velocityY;
+                posX += velocityX;
+
+                // Slabší přitahování ke středu
+                const centerX = container.offsetWidth / 2;
+                const pullToCenter = (centerX - posX) * 0.0002; // Zmenšeno z 0.0005
+                velocityX += pullToCenter;
+
+                // Kolize s piny
+                const pins = document.querySelectorAll('.pin');
+                pins.forEach(pin => {
+                    const pinX = parseFloat(pin.style.left);
+                    const pinY = parseFloat(pin.style.top);
+                    const dx = posX - pinX;
+                    const dy = posY - pinY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 20) {
+                        velocityX = dx * 0.18; // Silnější odraz do stran
+                        velocityY = Math.abs(velocityY) * 0.8;
+                        posY = pinY - 20;
+                    }
+                });
+
+                // Hranice kontejneru
+                if (posX < 0 || posX > container.offsetWidth - 30) {
+                    velocityX *= -0.5; // Silnější odraz od stěn
+                    velocityX += (centerX - posX) * 0.0005;
+                    posX = posX < 0 ? 0 : container.offsetWidth - 30;
+                }
+
+                // Dopad do slotu
+                if (posY > container.offsetHeight - 60) {
+                    const slotIndex = Math.floor(posX / (container.offsetWidth / slotValues.length));
+                    if (slotIndex >= 0 && slotIndex < slotValues.length) {
+                        // Násobení hodnoty dárku (ne celkového skóre)
+                        const winnings = Math.floor(selectedValue * slotValues[slotIndex]);
+                        score += winnings;
+                        scoreElement.textContent = score;
+                        
+                        // Zobrazení animace výhry
+                        const multiplierText = document.createElement('div');
+                        multiplierText.style.position = 'absolute';
+                        multiplierText.style.left = `${posX}px`;
+                        multiplierText.style.top = `${container.offsetHeight - 100}px`;
+                        multiplierText.style.color = '#ffff00';
+                        multiplierText.style.fontSize = '32px';
+                        multiplierText.style.fontWeight = 'bold';
+                        multiplierText.style.zIndex = '3';
+                        multiplierText.textContent = `+${winnings}`;
+                        container.appendChild(multiplierText);
+                        
+                        setTimeout(() => {
+                            multiplierText.remove();
+                        }, 1000);
+                    }
+                    present.remove();
+                    return;
+                }
+
+                present.style.left = `${posX}px`;
+                present.style.top = `${posY}px`;
+                present.style.transform = `rotate(${posX * 0.2}deg)`;
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        }
+
+        dropButton.addEventListener('click', createPresent);
+    </script>
+</body>
+</html>
