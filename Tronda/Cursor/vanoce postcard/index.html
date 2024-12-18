@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Poster</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-snowflakes"></div>
+    <div class="scene">
+        <div class="present">
+            <div class="ribbon-h"></div>
+            <div class="ribbon-v"></div>
+            <div class="bow">
+                <div class="bow-left"></div>
+                <div class="bow-right"></div>
+                <div class="bow-center"></div>
+            </div>
+            <div class="poster">
+                <div class="snowflakes" aria-hidden="true">
+                    <div class="snowflake">❅</div>
+                    <div class="snowflake">❆</div>
+                    <div class="snowflake">❅</div>
+                    <div class="snowflake">❆</div>
+                    <div class="snowflake">❅</div>
+                    <div class="snowflake">❆</div>
+                    <div class="snowflake">❅</div>
+                    <div class="snowflake">❆</div>
+                    <div class="snowflake">❅</div>
+                    <div class="snowflake">❆</div>
+                </div>
+                <h1>Merry Christmas</h1>
+                <div class="tree">🎄</div>
+                <div class="countdown">
+                    <div class="countdown-item">
+                        <span id="days">00</span>
+                        <span class="label">Days</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span id="hours">00</span>
+                        <span class="label">Hours</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span id="minutes">00</span>
+                        <span class="label">Minutes</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span id="seconds">00</span>
+                        <span class="label">Seconds</span>
+                    </div>
+                </div>
+                <div class="message">
+                    <p>Join us in celebrating</p>
+                    <p class="highlight">The Magic of Christmas</p>
+                    <p class="date">December 24th, 2024</p>
+                </div>
+                <div class="decorations">
+                    <span>🎁</span>
+                    <span>⭐</span>
+                    <span>🎅</span>
+                    <span>🦌</span>
+                </div>
+                <div class="audio-controls">
+                    <button id="toggleMusic" class="music-button">🎵 Play Music</button>
+                    <audio id="christmasMusic" loop autoplay muted>
+                        <source src="christmas-spirit-265741.mp3" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 3D movement
+        document.addEventListener('mousemove', (e) => {
+            const scene = document.querySelector('.scene');
+            const present = document.querySelector('.present');
+            
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            
+            present.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            const present = document.querySelector('.present');
+            present.style.transform = 'rotateY(0deg) rotateX(0deg)';
+        });
+
+        // Countdown Timer
+        function updateCountdown() {
+            const targetDate = new Date('December 24, 2024 00:00:00').getTime();
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            document.getElementById('days').textContent = days.toString().padStart(2, '0');
+            document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+        }
+
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // Music Controls
+        const musicButton = document.getElementById('toggleMusic');
+        const audio = document.getElementById('christmasMusic');
+        
+        // Start playing (but muted) when page loads
+        window.addEventListener('load', () => {
+            audio.play().catch(e => console.log('Auto-play prevented:', e));
+        });
+        
+        musicButton.addEventListener('click', () => {
+            if (audio.paused || audio.muted) {
+                audio.muted = false;
+                audio.play();
+                musicButton.textContent = '🔇 Pause Music';
+            } else {
+                audio.muted = true;
+                musicButton.textContent = '🎵 Play Music';
+            }
+        });
+
+        // Create background snowflakes
+        function createBackgroundSnow() {
+            const background = document.querySelector('.background-snowflakes');
+            for (let i = 0; i < 50; i++) {
+                const snowflake = document.createElement('div');
+                snowflake.className = 'background-snowflake';
+                snowflake.style.left = Math.random() * 100 + 'vw';
+                snowflake.style.animationDuration = 5 + Math.random() * 10 + 's';
+                snowflake.style.animationDelay = Math.random() * 5 + 's';
+                snowflake.innerHTML = Math.random() < 0.5 ? '❅' : '❆';
+                background.appendChild(snowflake);
+            }
+        }
+
+        createBackgroundSnow();
+    </script>
+</body>
+</html>
