@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS:GO Case Opening</title>
+    <style>
+        body {
+            margin: 0;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .case-container {
+            position: relative;
+            width: 800px;
+            height: 200px;
+            background: #2d2d2d;
+            margin: 20px;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .items-container {
+            display: flex;
+            position: absolute;
+            left: 0;
+            transition: left 8s cubic-bezier(0.32, 0.64, 0.45, 1);
+            animation: shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) infinite;
+            animation-delay: 0.5s;
+        }
+        .item {
+            width: 150px;
+            height: 200px;
+            margin: 0 5px;
+            background: #383838;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .item img {
+            width: 120px;
+            height: 90px;
+            object-fit: contain;
+        }
+        .item .name {
+            text-align: center;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .item .price {
+            font-size: 12px;
+            color: #4CAF50;
+        }
+        .item.legendary {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+        }
+        .item.rare {
+            background: linear-gradient(45deg, #ff0000, #ff6b6b);
+        }
+        .item.uncommon {
+            background: linear-gradient(45deg, #4b0082, #9400d3);
+        }
+        .item.common {
+            background: linear-gradient(45deg, #4169e1, #1e90ff);
+        }
+        .item.extraordinary {
+            background: linear-gradient(45deg, #FFAE39, #FFD700);
+            border: 2px solid #FFD700;
+        }
+        .item.covert {
+            background: linear-gradient(45deg, #EB4B4B, #FF1A1A);
+            border: 1px solid #FF1A1A;
+        }
+        .item.classified {
+            background: linear-gradient(45deg, #D32CE6, #B24AC7);
+            border: 1px solid #D32CE6;
+        }
+        .item.restricted {
+            background: linear-gradient(45deg, #8847FF, #6F35C9);
+            border: 1px solid #8847FF;
+        }
+        .item.mil-spec {
+            background: linear-gradient(45deg, #4B69FF, #3950A3);
+            border: 1px solid #4B69FF;
+        }
+        .item.industrial {
+            background: linear-gradient(45deg, #5E98D9, #4B7CB6);
+            border: 1px solid #5E98D9;
+        }
+        .item.consumer {
+            background: linear-gradient(45deg, #B0C3D9, #8FA3BC);
+            border: 1px solid #B0C3D9;
+        }
+        .selector {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 200px;
+            background: #ffff00;
+            box-shadow: 0 0 10px #ffff00;
+            z-index: 10;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px;
+            transition: transform 0.2s;
+        }
+        button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+        .stats {
+            margin: 20px;
+            font-size: 16px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        .balance {
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .bankrupt {
+            color: #ff0000;
+            font-weight: bold;
+            display: none;
+            margin-top: 10px;
+        }
+        .win-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+        .win-animation.show {
+            display: block;
+            animation: winEffect 1s ease-out;
+        }
+        .win-animation.legendary {
+            display: block;
+            background: radial-gradient(circle, transparent 0%, rgba(255,215,0,0.2) 100%);
+            animation: legendaryPulse 2s infinite;
+        }
+        @keyframes winEffect {
+            0% { 
+                background: transparent;
+                transform: scale(1);
+            }
+            50% { 
+                background: rgba(255,255,255,0.2);
+                transform: scale(1.1);
+            }
+            100% { 
+                background: transparent;
+                transform: scale(1);
+            }
+        }
+        @keyframes legendaryPulse {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .case-image {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+        @keyframes shake {
+            0% { transform: translateY(0); }
+            25% { transform: translateY(-2px); }
+            75% { transform: translateY(2px); }
+            100% { transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <h1>CS:GO Case Opening</h1>
+    <img src="https://steamcommunity-a.akamaihd.net/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I56KU0Zwwo4NUX4oFJZEHLbXU5A1PIYQNqhpOSV-fRPasw8rsUFJ5KBFZv668FFUuh6qZJmlD7tiyl4OIlaGhYuLTzjhVupJ12urH89ii3lHlqEdoMDr2I5jVLFFSv_J2Rg/256fx256f" class="case-image">
+    <div class="case-container">
+        <div class="selector"></div>
+        <div class="items-container"></div>
+    </div>
+    <button onclick="openCase()">Otevřít bednu (4€)</button>
+    <div class="stats">
+        Otevřeno beden: <span id="totalCases">0</span><br>
+        Legendární itemy: <span id="legendaryItems">0</span><br>
+        Balance: <span id="balance" class="balance">20.00€</span>
+        <div id="bankrupt" class="bankrupt">BANKROT!</div>
+    </div>
+    <div class="win-animation"></div>
+
+    <script>
+        const items = {
+            extraordinary: [
+                { name: "★ Butterfly Knife | Gamma Doppler", image: "https://cs2stash.com/img/skins/Butterfly_Knife_Gamma_Doppler.png", price: 190 },
+                { name: "★ Karambit | Fade", image: "https://cs2stash.com/img/skins/Karambit_Fade.png", price: 170 },
+                { name: "★ M9 Bayonet | Crimson Web", image: "https://cs2stash.com/img/skins/M9_Bayonet_Crimson_Web.png", price: 150 },
+                { name: "★ Skeleton Knife | Slaughter", image: "https://cs2stash.com/img/skins/Skeleton_Knife_Slaughter.png", price: 120 },
+                { name: "★ Talon Knife | Tiger Tooth", image: "https://cs2stash.com/img/skins/Talon_Knife_Tiger_Tooth.png", price: 90 }
+            ],
+            covert: [
+                { name: "AWP | Dragon Lore", image: "https://cs2stash.com/img/skins/AWP_Dragon_Lore.png", price: 50 },
+                { name: "AK-47 | Wild Lotus", image: "https://cs2stash.com/img/skins/AK-47_Wild_Lotus.png", price: 45 },
+                { name: "M4A4 | Howl", image: "https://cs2stash.com/img/skins/M4A4_Howl.png", price: 40 },
+                { name: "AWP | Gungnir", image: "https://cs2stash.com/img/skins/AWP_Gungnir.png", price: 35 },
+                { name: "Desert Eagle | Blaze", image: "https://cs2stash.com/img/skins/Desert_Eagle_Blaze.png", price: 15 }
+            ],
+            classified: [
+                { name: "AK-47 | Neon Rider", image: "https://cs2stash.com/img/skins/AK-47_Neon_Rider.png", price: 2.8 },
+                { name: "M4A4 | Neo-Noir", image: "https://cs2stash.com/img/skins/M4A4_Neo-Noir.png", price: 2.5 },
+                { name: "USP-S | Kill Confirmed", image: "https://cs2stash.com/img/skins/USP-S_Kill_Confirmed.png", price: 2.2 },
+                { name: "AWP | Containment Breach", image: "https://cs2stash.com/img/skins/AWP_Containment_Breach.png", price: 1.8 },
+                { name: "Desert Eagle | Code Red", image: "https://cs2stash.com/img/skins/Desert_Eagle_Code_Red.png", price: 1.2 }
+            ],
+            restricted: [
+                { name: "Glock-18 | Water Elemental", image: "https://cs2stash.com/img/skins/Glock-18_Water_Elemental.png", price: 0.8 },
+                { name: "P250 | Muertos", image: "https://cs2stash.com/img/skins/P250_Muertos.png", price: 0.6 },
+                { name: "MAC-10 | Neon Rider", image: "https://cs2stash.com/img/skins/MAC-10_Neon_Rider.png", price: 0.5 },
+                { name: "Five-SeveN | Monkey Business", image: "https://cs2stash.com/img/skins/Five-SeveN_Monkey_Business.png", price: 0.4 },
+                { name: "Nova | Hyper Beast", image: "https://cs2stash.com/img/skins/Nova_Hyper_Beast.png", price: 0.3 }
+            ]
+        };
+
+        let isSpinning = false;
+        let totalCases = 0;
+        let legendaryCount = 0;
+        let balance = 20.00;
+        const CASE_PRICE = 4.00;
+
+        function updateBalance(amount) {
+            balance += amount;
+            document.getElementById('balance').textContent = balance.toFixed(2) + '€';
+            
+            const button = document.querySelector('button');
+            if (balance < CASE_PRICE) {
+                button.disabled = true;
+                document.getElementById('bankrupt').style.display = 'block';
+            }
+        }
+
+        function generateSpinItems() {
+            const container = document.querySelector('.items-container');
+            container.innerHTML = '';
+            container.style.left = '0px';
+
+            for (let i = 0; i < 50; i++) {
+                const randomRarity = Math.random();
+                let selectedRarity;
+                let item;
+
+                if (i === 45) {
+                    if (Math.random() < 0.01) {  // 1% šance na extraordinary
+                        selectedRarity = 'extraordinary';
+                        item = items.extraordinary[Math.floor(Math.random() * items.extraordinary.length)];
+                    } else if (Math.random() < 0.10) {  // 9% šance na covert
+                        selectedRarity = 'covert';
+                        item = items.covert[Math.floor(Math.random() * items.covert.length)];
+                    } else if (Math.random() < 0.30) {  // 20% šance na classified
+                        selectedRarity = 'classified';
+                        item = items.classified[Math.floor(Math.random() * items.classified.length)];
+                    } else {  // 70% šance na restricted
+                        selectedRarity = 'restricted';
+                        item = items.restricted[Math.floor(Math.random() * items.restricted.length)];
+                    }
+                } else {
+                    if (randomRarity < 0.70) {
+                        selectedRarity = 'restricted';
+                        item = items.restricted[Math.floor(Math.random() * items.restricted.length)];
+                    } else if (randomRarity < 0.90) {
+                        selectedRarity = 'classified';
+                        item = items.classified[Math.floor(Math.random() * items.classified.length)];
+                    } else if (randomRarity < 0.99) {
+                        selectedRarity = 'covert';
+                        item = items.covert[Math.floor(Math.random() * items.covert.length)];
+                    } else {
+                        selectedRarity = 'extraordinary';
+                        item = items.extraordinary[Math.floor(Math.random() * items.extraordinary.length)];
+                    }
+                }
+
+                const itemElement = document.createElement('div');
+                itemElement.className = `item ${selectedRarity}`;
+                itemElement.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="name">${item.name}</div>
+                    <div class="price">${item.price}€</div>
+                `;
+                container.appendChild(itemElement);
+            }
+        }
+
+        function openCase() {
+            if (isSpinning || balance < CASE_PRICE) return;
+            
+            updateBalance(-CASE_PRICE);
+            isSpinning = true;
+            totalCases++;
+            document.getElementById('totalCases').textContent = totalCases;
+
+            const button = document.querySelector('button');
+            button.disabled = true;
+
+            generateSpinItems();
+
+            setTimeout(() => {
+                const container = document.querySelector('.items-container');
+                const itemWidth = 160;
+                const offset = 45 * itemWidth - 400;
+                container.style.left = `-${offset}px`;
+
+                setTimeout(() => {
+                    isSpinning = false;
+                    if (balance >= CASE_PRICE) {
+                        button.disabled = false;
+                    }
+
+                    const winningItem = container.children[45];
+                    const itemPrice = parseFloat(winningItem.querySelector('.price').textContent);
+                    updateBalance(itemPrice);
+
+                    document.querySelector('.win-animation').classList.add('show');
+                    setTimeout(() => {
+                        document.querySelector('.win-animation').classList.remove('show');
+                    }, 1000);
+
+                    if (winningItem.classList.contains('extraordinary')) {
+                        legendaryCount++;
+                        document.getElementById('legendaryItems').textContent = legendaryCount;
+                        document.querySelector('.win-animation').classList.add('legendary');
+                        setTimeout(() => {
+                            document.querySelector('.win-animation').classList.remove('legendary');
+                        }, 3000);
+                    }
+                }, 8000);  // Zkrácení animace na 8 sekund
+            }, 100);
+        }
+    </script>
+</body>
+</html>
