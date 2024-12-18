@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Christmas Slot Machine</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(45deg, #1a3c2a, #8b0000);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            overflow-x: auto;
+            position: relative;
+            padding: 20px;
+        }
+
+        @keyframes snowfall {
+            0% { transform: translateY(-10vh) translateX(0); }
+            100% { transform: translateY(110vh) translateX(20px); }
+        }
+
+        .snowflake {
+            position: fixed;
+            color: white;
+            font-size: 20px;
+            animation: snowfall linear infinite;
+            z-index: 1;
+        }
+
+        .machines-container {
+            display: flex;
+            gap: 30px;
+            padding: 20px;
+            justify-content: center;
+            min-width: max-content;
+        }
+
+        .slot-machine {
+            background: linear-gradient(145deg, #c41e3a, #8b0000);
+            padding: 20px;
+            border-radius: 25px;
+            box-shadow: 0 0 50px rgba(255,215,0,0.2);
+            text-align: center;
+            border: 4px solid #ffd700;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+            width: 350px;
+        }
+
+        h1 {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .reel {
+            width: 80px;
+            height: 80px;
+            font-size: 40px;
+            background: linear-gradient(145deg, #006400, #004d00);
+            border: 3px solid #ffd700;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin: 10px;
+            box-shadow: 0 0 20px rgba(255,215,0,0.2);
+        }
+
+        .reels {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
+            position: relative;
+        }
+
+        .symbol {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+
+        .bet-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: linear-gradient(145deg, #006400, #004d00);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin: 5px;
+            z-index: 3;
+            position: relative;
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #008000, #006400);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ffd700;
+            margin: 20px auto;
+            max-width: 400px;
+            font-size: 1.2em;
+        }
+
+        .win-message {
+            font-size: 28px;
+            color: #ffd700;
+            margin: 20px 0;
+            min-height: 42px;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .lever-container {
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 200px;
+            width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lever-base {
+            width: 40px;
+            height: 40px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .lever {
+            width: 20px;
+            height: 140px;
+            background: linear-gradient(90deg, #cc0000, #ff0000);
+            border-radius: 10px;
+            position: relative;
+            transform-origin: top center;
+            cursor: pointer;
+            transition: transform 0.3s ease-out;
+        }
+
+        .lever::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .lever.pulled {
+            transform: rotate(30deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="machines-container">
+        <div class="slot-machine" id="machine1">
+            <h1>🎅 Christmas Slots 🎄</h1>
+            <div class="stats">
+                <div>Credits: $<span class="credit">1000000000</span></div>
+                <div>Bet: $<span class="bet">1000</span></div>
+            </div>
+            <div class="bet-controls">
+                <button onclick="changeBet(1, -1000000)">-1M</button>
+                <button onclick="changeBet(1, 1000000)">+1M</button>
+                <button onclick="changeBet(1, -10000000)">-10M</button>
+                <button onclick="changeBet(1, 10000000)">+10M</button>
+            </div>
+            <div class="reels">
+                <div class="reel">
+                    <div class="symbol">🍒</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎄</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎁</div>
+                </div>
+                <div class="lever-container">
+                    <div class="lever-base"></div>
+                    <div class="lever" onclick="spin(1)"></div>
+                </div>
+            </div>
+            <div class="win-message"></div>
+            <div class="controls">
+                <button onclick="spin(1)" style="font-size: 16px; padding: 10px 20px;">SPIN!</button>
+            </div>
+        </div>
+
+        <div class="slot-machine" id="machine2">
+            <h1>🎅 Christmas Slots 🎄</h1>
+            <div class="stats">
+                <div>Credits: $<span class="credit">1000000000</span></div>
+                <div>Bet: $<span class="bet">1000</span></div>
+            </div>
+            <div class="bet-controls">
+                <button onclick="changeBet(2, -1000000)">-1M</button>
+                <button onclick="changeBet(2, 1000000)">+1M</button>
+                <button onclick="changeBet(2, -10000000)">-10M</button>
+                <button onclick="changeBet(2, 10000000)">+10M</button>
+            </div>
+            <div class="reels">
+                <div class="reel">
+                    <div class="symbol">🍒</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎄</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎁</div>
+                </div>
+                <div class="lever-container">
+                    <div class="lever-base"></div>
+                    <div class="lever" onclick="spin(2)"></div>
+                </div>
+            </div>
+            <div class="win-message"></div>
+            <div class="controls">
+                <button onclick="spin(2)" style="font-size: 16px; padding: 10px 20px;">SPIN!</button>
+            </div>
+        </div>
+
+        <div class="slot-machine" id="machine3">
+            <h1>���� Christmas Slots 🎄</h1>
+            <div class="stats">
+                <div>Credits: $<span class="credit">1000000000</span></div>
+                <div>Bet: $<span class="bet">1000</span></div>
+            </div>
+            <div class="bet-controls">
+                <button onclick="changeBet(3, -1000000)">-1M</button>
+                <button onclick="changeBet(3, 1000000)">+1M</button>
+                <button onclick="changeBet(3, -10000000)">-10M</button>
+                <button onclick="changeBet(3, 10000000)">+10M</button>
+            </div>
+            <div class="reels">
+                <div class="reel">
+                    <div class="symbol">🍒</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎄</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎁</div>
+                </div>
+                <div class="lever-container">
+                    <div class="lever-base"></div>
+                    <div class="lever" onclick="spin(3)"></div>
+                </div>
+            </div>
+            <div class="win-message"></div>
+            <div class="controls">
+                <button onclick="spin(3)" style="font-size: 16px; padding: 10px 20px;">SPIN!</button>
+            </div>
+        </div>
+
+        <div class="slot-machine" id="machine4">
+            <h1>🎅 Christmas Slots 🎄</h1>
+            <div class="stats">
+                <div>Credits: $<span class="credit">1000000000</span></div>
+                <div>Bet: $<span class="bet">1000</span></div>
+            </div>
+            <div class="bet-controls">
+                <button onclick="changeBet(4, -1000000)">-1M</button>
+                <button onclick="changeBet(4, 1000000)">+1M</button>
+                <button onclick="changeBet(4, -10000000)">-10M</button>
+                <button onclick="changeBet(4, 10000000)">+10M</button>
+            </div>
+            <div class="reels">
+                <div class="reel">
+                    <div class="symbol">🍒</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎄</div>
+                </div>
+                <div class="reel">
+                    <div class="symbol">🎁</div>
+                </div>
+                <div class="lever-container">
+                    <div class="lever-base"></div>
+                    <div class="lever" onclick="spin(4)"></div>
+                </div>
+            </div>
+            <div class="win-message"></div>
+            <div class="controls">
+                <button onclick="spin(4)" style="font-size: 16px; padding: 10px 20px;">SPIN!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const symbols = ['🎅', '🎄', '🎁', '⛄', '🦌', '🔔', '🎀'];
+        const machines = {
+            1: { credit: 1000000000, bet: 1000, isSpinning: false },
+            2: { credit: 1000000000, bet: 1000, isSpinning: false },
+            3: { credit: 1000000000, bet: 1000, isSpinning: false },
+            4: { credit: 1000000000, bet: 1000, isSpinning: false }
+        };
+
+        const winningCombinations = {
+            '🎅🎅🎅': 100,
+            '🎄🎄🎄': 50,
+            '🎁🎁🎁': 30,
+            '⛄⛄⛄': 25,
+            '🦌🦌🦌': 20,
+            '🔔🔔🔔': 15,
+            '🎀🎀🎀': 10
+        };
+
+        function createSnow() {
+            const snowflakes = ['❄', '❅', '❆'];
+            const snowflake = document.createElement('div');
+            snowflake.className = 'snowflake';
+            snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+            snowflake.style.left = Math.random() * 100 + 'vw';
+            snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+            document.body.appendChild(snowflake);
+            setTimeout(() => snowflake.remove(), 5000);
+        }
+
+        setInterval(createSnow, 200);
+
+        function changeBet(machineId, amount) {
+            const machine = machines[machineId];
+            const newBet = machine.bet + amount;
+            if (newBet >= 1000 && newBet <= machine.credit) {
+                machine.bet = newBet;
+                document.querySelector(`#machine${machineId} .bet`).textContent = machine.bet.toLocaleString();
+            }
+        }
+
+        function getRandomSymbol() {
+            return symbols[Math.floor(Math.random() * symbols.length)];
+        }
+
+        function animateReel(reel, duration, symbols) {
+            const symbolElement = reel.querySelector('.symbol');
+            let start = null;
+            const startPos = 0;
+            const endPos = symbols.length * 100;
+
+            function animate(timestamp) {
+                if (!start) start = timestamp;
+                const progress = timestamp - start;
+                const percentage = Math.min(progress / duration, 1);
+
+                const easeOut = 1 - Math.pow(1 - percentage, 3);
+                const currentPos = startPos + (endPos * easeOut);
+                const currentIndex = Math.floor((currentPos / 100) % symbols.length);
+                symbolElement.textContent = symbols[currentIndex];
+                symbolElement.style.transform = `scale(${1 + Math.sin(percentage * Math.PI) * 0.2})`;
+
+                if (percentage < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function checkWin(machineId, results) {
+            const machine = machines[machineId];
+            const combination = results.join('');
+            const multiplier = winningCombinations[combination];
+            const winMessageElement = document.querySelector(`#machine${machineId} .win-message`);
+            
+            if (multiplier) {
+                const winAmount = machine.bet * multiplier;
+                machine.credit += winAmount;
+                winMessageElement.textContent = `WIN! $${winAmount.toLocaleString()} (${multiplier}x)`;
+                winMessageElement.style.color = '#ffd700';
+            } else {
+                winMessageElement.textContent = 'Try again!';
+                winMessageElement.style.color = '#fff';
+            }
+            
+            document.querySelector(`#machine${machineId} .credit`).textContent = machine.credit.toLocaleString();
+        }
+
+        function spin(machineId) {
+            const machine = machines[machineId];
+            if (machine.isSpinning || machine.credit < machine.bet) return;
+
+            const lever = document.querySelector(`#machine${machineId} .lever`);
+            lever.classList.add('pulled');
+            
+            setTimeout(() => {
+                lever.classList.remove('pulled');
+            }, 1000);
+
+            machine.isSpinning = true;
+            const spinButton = document.querySelector(`#machine${machineId} button`);
+            spinButton.disabled = true;
+            
+            const winMessageElement = document.querySelector(`#machine${machineId} .win-message`);
+            winMessageElement.textContent = '';
+            
+            machine.credit -= machine.bet;
+            document.querySelector(`#machine${machineId} .credit`).textContent = machine.credit.toLocaleString();
+
+            const results = [];
+            const baseDelay = 1500;
+            const willWin = Math.random() < 0.5;
+
+            if (willWin) {
+                const winningSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+                results.push(winningSymbol, winningSymbol, winningSymbol);
+            } else {
+                while (results.length < 3) {
+                    const symbol = getRandomSymbol();
+                    if (results.length === 2 && results[0] === results[1]) {
+                        const differentSymbol = symbols.find(s => s !== results[0]);
+                        results.push(differentSymbol);
+                    } else {
+                        results.push(symbol);
+                    }
+                }
+            }
+
+            const reels = document.querySelectorAll(`#machine${machineId} .reel`);
+            reels.forEach((reel, index) => {
+                const reelSymbols = Array(20).fill(0).map(() => getRandomSymbol());
+                reelSymbols.push(results[index]);
+
+                setTimeout(() => {
+                    animateReel(reel, baseDelay, reelSymbols);
+                }, index * 300);
+            });
+
+            setTimeout(() => {
+                checkWin(machineId, results);
+                machine.isSpinning = false;
+                spinButton.disabled = false;
+            }, baseDelay + 900);
+        }
+
+        // Initialize credit displays
+        Object.keys(machines).forEach(machineId => {
+            document.querySelector(`#machine${machineId} .credit`).textContent = 
+                machines[machineId].credit.toLocaleString();
+        });
+    </script>
+</body>
+</html>
