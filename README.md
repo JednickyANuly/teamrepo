@@ -1,3 +1,3 @@
 # informace ke kroužku
 
-Příští kroužek: 5. 12. 2024 @ 14:00
+Příští kroužek: 8. 1. 2025 @ 14:00
