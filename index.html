@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snowy Scene</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #links {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+        }
+        #links a {
+            color: #ffd700;
+            text-decoration: none;
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+        #links a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@v0.157.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.157.0/examples/jsm/"
+          }
+        }
+    </script>
+    <div id="links">
+        <span>Some</span>
+        <a href="/petr/vanoce/">say</a>
+        <a href="/ondra/cursor/">Christmas</a>
+        <a href="/Krajda/cursor_ai/">is</a>
+        <a href="/David/gambligmas">about</a>
+        <a href="/adam/kostel/cursor.html">presents,</a>
+        <span>but</span>
+        <a href="/Tronda/Cursor/">some</a>
+        <a href="/Tronda/Cursor/vanoce postcard/">other</a>
+        <a href="/Tronda/Cursor/game/">surprises</a>
+        <span>await!</span>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html> 
