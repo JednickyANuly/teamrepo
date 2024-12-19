@@ -4,31 +4,24 @@ import { TextGeometry } from 'https://unpkg.com/three@0.157.0/examples/jsm/geome
 import { FontLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/FontLoader.js';
 import { TTFLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/TTFLoader.js';
 
-// Detect if running on mobile
+// Mobile detection
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-// Adjust quality settings based on device
-const qualitySettings = {
-    particleCount: isMobile ? 300 : 1000,
-    snowflakeCount: isMobile ? 300 : 1000,
-    shadowMapSize: isMobile ? 1024 : 2048,
-    treeClusters: isMobile ? 3 : 5,
-    treesPerCluster: isMobile ? 8 : 15
-};
 
 // Scene setup
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: !isMobile,
+    powerPreference: isMobile ? "low-power" : "high-performance"
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 // Update initial camera position
-camera.position.set(-0.33, 6, 15);
-camera.lookAt(0, 6, 0);
+camera.position.set(-0.33, 1.22, 11.89);
+camera.lookAt(0, 2, 0);  // Keep looking at the text height
 
 // Camera controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -47,8 +40,8 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(15, 15, 5);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = qualitySettings.shadowMapSize;
-directionalLight.shadow.mapSize.height = qualitySettings.shadowMapSize;
+directionalLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
+directionalLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
 directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 50;
 directionalLight.shadow.camera.left = -25;
@@ -68,7 +61,7 @@ const fillLight = new THREE.HemisphereLight(
 scene.add(fillLight);
 
 // Ground
-const groundGeometry = new THREE.PlaneGeometry(50, 50, 50, 50);
+const groundGeometry = new THREE.PlaneGeometry(50, 50, isMobile ? 25 : 50, isMobile ? 25 : 50);
 const groundMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xcccccc,
     roughness: 0.8
@@ -80,9 +73,9 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Snow particles
-const snowflakeCount = qualitySettings.snowflakeCount;
+const snowflakeCount = isMobile ? 500 : 1000;
 const snowflakes = [];
-const snowGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+const snowGeometry = new THREE.SphereGeometry(0.02, isMobile ? 4 : 8, isMobile ? 4 : 8);
 const snowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
 for (let i = 0; i < snowflakeCount; i++) {
@@ -108,8 +101,8 @@ function resetSnowflake(snowflake) {
 // Snow accumulation system
 class SnowAccumulation {
     constructor() {
-        this.resolution = 0.25; // Size of each snow accumulation cell
-        this.maxHeight = 0.5;   // Maximum snow height
+        this.resolution = isMobile ? 0.5 : 0.25; // Larger cells on mobile
+        this.maxHeight = 0.5;
         this.accumulation = new Map();
         this.snowMeshes = new Map();
     }
@@ -179,14 +172,27 @@ controls.addEventListener('end', () => {
 });
 
 // Animation
-let frameCount = 0;
-const particleUpdateInterval = isMobile ? 2 : 1;
-
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
 
-    // Update snowflakes every frame
+    // Log camera position when it changes significantly
+    const roundedPos = {
+        x: Math.round(camera.position.x * 100) / 100,
+        y: Math.round(camera.position.y * 100) / 100,
+        z: Math.round(camera.position.z * 100) / 100
+    };
+    
+    if (!window.lastLoggedPos || 
+        Math.abs(window.lastLoggedPos.x - roundedPos.x) > 0.1 ||
+        Math.abs(window.lastLoggedPos.y - roundedPos.y) > 0.1 ||
+        Math.abs(window.lastLoggedPos.z - roundedPos.z) > 0.1) {
+        
+        console.log('Camera position:', roundedPos);
+        window.lastLoggedPos = roundedPos;
+    }
+
+    // Update snowflakes
     snowflakes.forEach(snowflake => {
         snowflake.position.y -= snowflake.velocity;
         snowflake.position.x += snowflake.drift.x;
@@ -195,36 +201,36 @@ function animate() {
         if (snowflake.position.y < -2 || 
             Math.abs(snowflake.position.x) > 25 || 
             Math.abs(snowflake.position.z) > 25) {
+            
             snowAccumulation.addSnow(snowflake.position.x, snowflake.position.z);
             resetSnowflake(snowflake);
         }
     });
 
-    // Update particles with mobile optimization
-    frameCount++;
-    if (frameCount % particleUpdateInterval === 0) {
-        particles.forEach((particle, i) => {
-            const userData = particle.userData;
-            
-            // Update particle positions in a spherical pattern
-            const time = Date.now() * 0.001 * userData.speed;
-            const theta = userData.theta + time;
-            const phi = userData.phi + time * 0.5;
-            
-            particle.position.x = userData.radius * Math.cos(theta) * Math.sin(phi);
-            particle.position.y = userData.verticalOffset + (userData.radius * Math.sin(theta) * Math.sin(phi));
-            particle.position.z = userData.radius * Math.cos(phi);
-            
-            particle.material.emissiveIntensity = 
-                0.5 + Math.sin(time * 3 + userData.phase) * 0.5;
-            
-            if (!isMobile) {
-                particle.scale.setScalar(
-                    1.0 + Math.sin(time * 3 + userData.phase) * 0.2
-                );
-            }
-        });
-    }
+    // Update particles with more dynamic movement
+    particles.forEach((particle, i) => {
+        const userData = particle.userData;
+        
+        // Vertical floating motion
+        particle.position.y = userData.originalY + 
+            Math.sin(Date.now() * 0.001 * userData.speed + userData.phase) * userData.amplitude;
+        
+        // Horizontal swirling motion
+        const swirl = Date.now() * 0.001 * 0.5 + i * 0.001;
+        particle.position.x = userData.originalX + 
+            Math.sin(swirl) * 0.2;
+        particle.position.z = userData.originalZ + 
+            Math.cos(swirl) * 0.2;
+        
+        // Sparkle effect
+        particle.material.emissiveIntensity = 
+            0.5 + Math.sin(Date.now() * 0.001 * 5 + userData.phase) * 0.5;
+        
+        // Scale pulsing
+        particle.scale.setScalar(
+            1.0 + Math.sin(Date.now() * 0.001 * 3 + userData.phase) * 0.2
+        );
+    });
 
     renderer.render(scene, camera);
 }
@@ -278,31 +284,35 @@ function createTree(x, z, scale = 1) {
 // Add random trees
 function createForest() {
     function isInClearing(x, z) {
-        const billboardZ = -5;
-        const clearingWidth = 8;
-        const clearingDepth = 10;
+        // Define the clearing area in front of the billboard
+        const billboardZ = -5;  // Billboard z position
+        const clearingWidth = 8;  // Width of clearing
+        const clearingDepth = 10;  // Depth of clearing
         
+        // Check if point is in the clearing area
         return Math.abs(x) < clearingWidth/2 && 
                z > billboardZ - clearingDepth && 
                z < billboardZ + 2;
     }
 
     // Create dense clusters of trees
-    for(let cluster = 0; cluster < qualitySettings.treeClusters; cluster++) {
+    for(let cluster = 0; cluster < 5; cluster++) {
         const centerX = (Math.random() - 0.5) * 35;
         const centerZ = (Math.random() - 0.5) * 35;
         
+        // Skip cluster if its center is in the clearing
         if (isInClearing(centerX, centerZ)) continue;
         
-        const treesInCluster = qualitySettings.treesPerCluster + 
-            Math.floor(Math.random() * 5);
+        // Create 15-20 trees per cluster
+        const treesInCluster = 15 + Math.floor(Math.random() * 5);
         
         for(let i = 0; i < treesInCluster; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 8;
+            const radius = Math.random() * 8; // Cluster radius
             const x = centerX + Math.cos(angle) * radius;
             const z = centerZ + Math.sin(angle) * radius;
             
+            // Only create tree if it's not in the clearing
             if (!isInClearing(x, z)) {
                 const scale = 0.6 + Math.random() * 1.2;
                 createTree(x, z, scale);
@@ -310,12 +320,12 @@ function createForest() {
         }
     }
 
-    // Add scattered trees
-    const scatteredTrees = isMobile ? 15 : 30;
-    for(let i = 0; i < scatteredTrees; i++) {
+    // Add some scattered individual trees
+    for(let i = 0; i < 30; i++) {
         const x = (Math.random() - 0.5) * 45;
         const z = (Math.random() - 0.5) * 45;
         
+        // Only create tree if it's not in the clearing
         if (!isInClearing(x, z)) {
             const scale = 0.7 + Math.random() * 1.0;
             createTree(x, z, scale);
@@ -328,228 +338,105 @@ createForest();
 
 // Add after scene setup
 const particles = [];
-const particleCount = qualitySettings.particleCount;
+const particleCount = 200;
 
 // Create floating 3D text
 function createFloatingText() {
     const ttfLoader = new TTFLoader();
     const fontLoader = new FontLoader();
 
-    ttfLoader.load('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf', 
-        function(json) {
-            console.log('Font loaded successfully');
-            const font = fontLoader.parse(json);
-            
-            const textMaterial = new THREE.MeshStandardMaterial({
+    ttfLoader.load('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf', function(json) {
+        const font = fontLoader.parse(json);
+        
+        const textMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffd700,
+            metalness: isMobile ? 0.5 : 1.0,
+            roughness: isMobile ? 0.5 : 0.1,
+            emissive: 0xffd700,
+            emissiveIntensity: 0.2,
+            envMapIntensity: isMobile ? 0.5 : 1.5
+        });
+
+        const text = 'Veselé Vánoce a šťastný nový rok!';
+        const textGeometry = new TextGeometry(text, {
+            font: font,
+            size: 1.2,
+            height: 0.2,
+            curveSegments: isMobile ? 4 : 12,
+            bevelEnabled: !isMobile,
+            bevelThickness: 0.03,
+            bevelSize: 0.02,
+            bevelOffset: 0,
+            bevelSegments: isMobile ? 2 : 5
+        });
+
+        textGeometry.computeBoundingBox();
+        const centerOffset = -(textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x) / 2;
+        
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.x = centerOffset;
+        textMesh.position.y = 2;
+        textMesh.position.z = 0;
+        textMesh.castShadow = true;
+        textMesh.receiveShadow = true;
+        
+        scene.add(textMesh);
+
+        // Enhanced sparkling particles
+        const particleCount = isMobile ? 200 : 1000;
+        const particleGeometry = new THREE.SphereGeometry(0.03, isMobile ? 4 : 8, isMobile ? 4 : 8);
+        
+        for(let i = 0; i < particleCount; i++) {
+            const particleMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffd700,
-                metalness: 1.0,
-                roughness: 0.1,
                 emissive: 0xffd700,
-                emissiveIntensity: 0.2,
-                envMapIntensity: 1.5
+                emissiveIntensity: 0.8,
+                metalness: isMobile ? 0.5 : 1,
+                roughness: isMobile ? 0.5 : 0,
+                transparent: !isMobile,
+                opacity: isMobile ? 1 : 0.8
             });
 
-            // Split text into multiple lines for better performance
-            const lines = [
-                'VESELÉ',
-                'VÁNOCE',
-                'A',
-                'ŠŤASTNÝ',
-                ['NOVÝ', 'ROK!']  // Last line as array of words
-            ];
-
-            console.log('Creating text with', lines.length, 'lines');
-
-            const textGroup = new THREE.Group();
-            let maxWidth = 0;
-            const baseHeight = 8.5;  // Lowered from 12 to 10.5
-            const lineSpacing = isMobile ? 0.6 : 0.8;
-            const letterSpacing = isMobile ? 0.3 : 0.4;
-            const wordSpacing = 0.8;
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
             
-            // Special kerning adjustments
-            const kernAdjustments = {
-                'V': -0.2,  // Tighter kerning for V
-                'A': -0.2   // Tighter kerning for A
+            // Position particles in a more contained volume around the text
+            const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
+            const textHeight = textGeometry.boundingBox.max.y - textGeometry.boundingBox.min.y;
+            
+            particle.position.x = centerOffset + (Math.random() * textWidth);
+            particle.position.y = 1.8 + Math.random() * textHeight;
+            particle.position.z = -0.5 + Math.random() * 1;
+            
+            particle.userData = {
+                originalY: particle.position.y,
+                originalX: particle.position.x,
+                originalZ: particle.position.z,
+                speed: 0.8 + Math.random() * 1.2,
+                phase: Math.random() * Math.PI * 2,
+                amplitude: 0.1 + Math.random() * 0.15
             };
 
-            // Create a sample geometry to measure line height
-            const sampleGeometry = new TextGeometry('X', {
-                font: font,
-                size: isMobile ? 0.8 : 1.2,
-                height: 0.2,
-                curveSegments: isMobile ? 6 : 10,
-                bevelEnabled: true,
-                bevelThickness: 0.02,
-                bevelSize: 0.01,
-                bevelOffset: 0,
-                bevelSegments: isMobile ? 2 : 3
-            });
-            sampleGeometry.computeBoundingBox();
-            const lineHeight = sampleGeometry.boundingBox.max.y - sampleGeometry.boundingBox.min.y;
-            
-            console.log('Line height:', lineHeight);
-            
-            // Calculate total height including spacing
-            const totalHeight = (lineHeight * lines.length) + (lineSpacing * (lines.length - 1));
-            console.log('Total text height:', totalHeight);
-
-            // Calculate starting Y position to keep bottom line at same position
-            const bottomLineY = baseHeight - totalHeight;  // Target Y for bottom line
-            const startY = bottomLineY + totalHeight;      // Start from here to reach bottom line
-
-            // Create lines
-            let currentY = startY;  // Start from calculated position
-            lines.forEach((line, lineIndex) => {
-                const lineGroup = new THREE.Group();
-                let currentX = 0;
-                let lineWidth = 0;
-
-                // Handle array of words for last line
-                const words = Array.isArray(line) ? line : [line];
-
-                // First measure total width including word spacing
-                words.forEach((word, wordIndex) => {
-                    let wordWidth = 0;
-                    [...word].forEach((char, index) => {
-                        try {
-                            const geometry = new TextGeometry(char, {
-                                font: font,
-                                size: isMobile ? 0.8 : 1.2,
-                                height: 0.2,
-                                curveSegments: isMobile ? 6 : 10,
-                                bevelEnabled: true,
-                                bevelThickness: 0.02,
-                                bevelSize: 0.01,
-                                bevelOffset: 0,
-                                bevelSegments: isMobile ? 2 : 3
-                            });
-                            geometry.computeBoundingBox();
-                            wordWidth += geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-                            if (index < word.length - 1) {
-                                const kernValue = kernAdjustments[char] || 0;
-                                wordWidth += letterSpacing + kernValue;
-                            }
-                        } catch (error) {
-                            console.error('Error creating geometry for char:', char, error);
-                        }
-                    });
-                    lineWidth += wordWidth;
-                    if (wordIndex < words.length - 1) {
-                        lineWidth += wordSpacing;
-                    }
-                });
-
-                maxWidth = Math.max(maxWidth, lineWidth);
-
-                // Create and position words
-                words.forEach((word, wordIndex) => {
-                    let wordWidth = 0;
-                    [...word].forEach((char, charIndex) => {
-                        try {
-                            const geometry = new TextGeometry(char, {
-                                font: font,
-                                size: isMobile ? 0.8 : 1.2,
-                                height: 0.2,
-                                curveSegments: isMobile ? 6 : 10,
-                                bevelEnabled: true,
-                                bevelThickness: 0.02,
-                                bevelSize: 0.01,
-                                bevelOffset: 0,
-                                bevelSegments: isMobile ? 2 : 3
-                            });
-
-                            geometry.computeBoundingBox();
-                            const letterWidth = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-
-                            const letterMesh = new THREE.Mesh(geometry, textMaterial);
-                            letterMesh.position.x = currentX - lineWidth / 2;
-                            letterMesh.position.y = currentY;
-                            letterMesh.position.z = 0;
-                            
-                            letterMesh.castShadow = true;
-                            letterMesh.receiveShadow = true;
-                            lineGroup.add(letterMesh);
-
-                            const kernValue = kernAdjustments[char] || 0;
-                            currentX += letterWidth + letterSpacing + kernValue;
-                            wordWidth += letterWidth + letterSpacing + kernValue;
-                        } catch (error) {
-                            console.error('Error creating letter mesh for char:', char, error);
-                        }
-                    });
-                    if (wordIndex < words.length - 1) {
-                        currentX += wordSpacing - letterSpacing; // Adjust for the last letter spacing
-                    }
-                });
-
-                textGroup.add(lineGroup);
-                currentY -= lineSpacing + lineHeight;
-            });
-
-            scene.add(textGroup);
-            console.log('Text group added to scene');
-
-            // Create particles in a sphere around the text
-            const particleCount = isMobile ? 200 : 500;
-            const particleGeometry = new THREE.SphereGeometry(0.03, 6, 6);
-            const sphereRadius = Math.max(maxWidth, totalHeight) * 0.7;
-            const sphereCenterY = baseHeight - totalHeight / 2 + 1; // Center the sphere on the text
-            
-            for(let i = 0; i < particleCount; i++) {
-                const particleMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xffd700,
-                    emissive: 0xffd700,
-                    emissiveIntensity: 0.8,
-                    metalness: 1,
-                    roughness: 0,
-                    transparent: true,
-                    opacity: 0.8
-                });
-
-                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-                
-                // Calculate initial position on a sphere
-                const phi = Math.acos(-1 + (2 * i) / particleCount);
-                const theta = Math.sqrt(particleCount * Math.PI) * phi;
-                
-                particle.position.x = sphereRadius * Math.cos(theta) * Math.sin(phi);
-                particle.position.y = sphereCenterY + (sphereRadius * Math.sin(theta) * Math.sin(phi));
-                particle.position.z = sphereRadius * Math.cos(phi);
-                
-                particle.userData = {
-                    radius: sphereRadius,
-                    theta: theta,
-                    phi: phi,
-                    speed: 0.2 + Math.random() * 0.3,
-                    phase: Math.random() * Math.PI * 2,
-                    verticalOffset: sphereCenterY
-                };
-
-                particles.push(particle);
-                scene.add(particle);
-            }
-        },
-        undefined,
-        function(error) {
-            console.error('Error loading font:', error);
+            particles.push(particle);
+            scene.add(particle);
         }
-    );
+    });
 }
 
 // Call createFloatingText instead of createBillboard
 createFloatingText();
 
-// Add this after scene setup to create environment map
-const cubeTextureLoader = new THREE.CubeTextureLoader();
-const envMap = cubeTextureLoader.load([
-    'https://threejs.org/examples/textures/cube/Park2/posx.jpg',
-    'https://threejs.org/examples/textures/cube/Park2/negx.jpg',
-    'https://threejs.org/examples/textures/cube/Park2/posy.jpg',
-    'https://threejs.org/examples/textures/cube/Park2/negy.jpg',
-    'https://threejs.org/examples/textures/cube/Park2/posz.jpg',
-    'https://threejs.org/examples/textures/cube/Park2/negz.jpg'
-]);
-scene.environment = envMap;
+// Add environment map only for desktop
+if (!isMobile) {
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const envMap = cubeTextureLoader.load([
+        'https://threejs.org/examples/textures/cube/Park2/posx.jpg',
+        'https://threejs.org/examples/textures/cube/Park2/negx.jpg',
+        'https://threejs.org/examples/textures/cube/Park2/posy.jpg',
+        'https://threejs.org/examples/textures/cube/Park2/negy.jpg',
+        'https://threejs.org/examples/textures/cube/Park2/posz.jpg',
+        'https://threejs.org/examples/textures/cube/Park2/negz.jpg'
+    ]);
+    scene.environment = envMap;
+}
 
 animate(); 
