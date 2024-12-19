@@ -4,13 +4,26 @@ import { TextGeometry } from 'https://unpkg.com/three@0.157.0/examples/jsm/geome
 import { FontLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/FontLoader.js';
 import { TTFLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/TTFLoader.js';
 
+// Detect if running on mobile
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// Adjust quality settings based on device
+const qualitySettings = {
+    particleCount: isMobile ? 300 : 1000,
+    snowflakeCount: isMobile ? 300 : 1000,
+    shadowMapSize: isMobile ? 1024 : 2048,
+    treeClusters: isMobile ? 3 : 5,
+    treesPerCluster: isMobile ? 8 : 15
+};
+
 // Scene setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 // Update initial camera position
@@ -34,8 +47,8 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(15, 15, 5);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.mapSize.width = qualitySettings.shadowMapSize;
+directionalLight.shadow.mapSize.height = qualitySettings.shadowMapSize;
 directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 50;
 directionalLight.shadow.camera.left = -25;
@@ -67,7 +80,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Snow particles
-const snowflakeCount = 1000;
+const snowflakeCount = qualitySettings.snowflakeCount;
 const snowflakes = [];
 const snowGeometry = new THREE.SphereGeometry(0.02, 8, 8);
 const snowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -166,67 +179,50 @@ controls.addEventListener('end', () => {
 });
 
 // Animation
+let frameCount = 0;
+const particleUpdateInterval = isMobile ? 2 : 1;
+
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
 
-    // Log camera position when it changes significantly
-    const roundedPos = {
-        x: Math.round(camera.position.x * 100) / 100,
-        y: Math.round(camera.position.y * 100) / 100,
-        z: Math.round(camera.position.z * 100) / 100
-    };
-    
-    if (!window.lastLoggedPos || 
-        Math.abs(window.lastLoggedPos.x - roundedPos.x) > 0.1 ||
-        Math.abs(window.lastLoggedPos.y - roundedPos.y) > 0.1 ||
-        Math.abs(window.lastLoggedPos.z - roundedPos.z) > 0.1) {
-        
-        console.log('Camera position:', roundedPos);
-        window.lastLoggedPos = roundedPos;
-    }
-
-    // Update snowflakes
+    // Update snowflakes every frame
     snowflakes.forEach(snowflake => {
         snowflake.position.y -= snowflake.velocity;
         snowflake.position.x += snowflake.drift.x;
         snowflake.position.z += snowflake.drift.z;
 
-        // Reset snowflake if it goes below ground or out of bounds
         if (snowflake.position.y < -2 || 
             Math.abs(snowflake.position.x) > 25 || 
             Math.abs(snowflake.position.z) > 25) {
-            
-            // Add snow to accumulation system
             snowAccumulation.addSnow(snowflake.position.x, snowflake.position.z);
             resetSnowflake(snowflake);
         }
     });
 
-    // Update particles with more dynamic movement
-    particles.forEach((particle, i) => {
-        const userData = particle.userData;
-        
-        // Vertical floating motion
-        particle.position.y = userData.originalY + 
-            Math.sin(Date.now() * 0.001 * userData.speed + userData.phase) * userData.amplitude;
-        
-        // Horizontal swirling motion
-        const swirl = Date.now() * 0.001 * 0.5 + i * 0.001;
-        particle.position.x = userData.originalX + 
-            Math.sin(swirl) * 0.2;
-        particle.position.z = userData.originalZ + 
-            Math.cos(swirl) * 0.2;
-        
-        // Sparkle effect
-        particle.material.emissiveIntensity = 
-            0.5 + Math.sin(Date.now() * 0.001 * 5 + userData.phase) * 0.5;
-        
-        // Scale pulsing
-        particle.scale.setScalar(
-            1.0 + Math.sin(Date.now() * 0.001 * 3 + userData.phase) * 0.2
-        );
-    });
+    // Update particles with mobile optimization
+    frameCount++;
+    if (frameCount % particleUpdateInterval === 0) {
+        particles.forEach((particle, i) => {
+            const userData = particle.userData;
+            
+            particle.position.y = userData.originalY + 
+                Math.sin(Date.now() * 0.001 * userData.speed + userData.phase) * userData.amplitude;
+            
+            const swirl = Date.now() * 0.001 * 0.3 + i * 0.001;
+            particle.position.x = userData.originalX + Math.sin(swirl) * 0.1;
+            particle.position.z = userData.originalZ + Math.cos(swirl) * 0.1;
+            
+            particle.material.emissiveIntensity = 
+                0.5 + Math.sin(Date.now() * 0.001 * 3 + userData.phase) * 0.5;
+            
+            if (!isMobile) {
+                particle.scale.setScalar(
+                    1.0 + Math.sin(Date.now() * 0.001 * 3 + userData.phase) * 0.2
+                );
+            }
+        });
+    }
 
     renderer.render(scene, camera);
 }
@@ -280,35 +276,31 @@ function createTree(x, z, scale = 1) {
 // Add random trees
 function createForest() {
     function isInClearing(x, z) {
-        // Define the clearing area in front of the billboard
-        const billboardZ = -5;  // Billboard z position
-        const clearingWidth = 8;  // Width of clearing
-        const clearingDepth = 10;  // Depth of clearing
+        const billboardZ = -5;
+        const clearingWidth = 8;
+        const clearingDepth = 10;
         
-        // Check if point is in the clearing area
         return Math.abs(x) < clearingWidth/2 && 
                z > billboardZ - clearingDepth && 
                z < billboardZ + 2;
     }
 
     // Create dense clusters of trees
-    for(let cluster = 0; cluster < 5; cluster++) {
+    for(let cluster = 0; cluster < qualitySettings.treeClusters; cluster++) {
         const centerX = (Math.random() - 0.5) * 35;
         const centerZ = (Math.random() - 0.5) * 35;
         
-        // Skip cluster if its center is in the clearing
         if (isInClearing(centerX, centerZ)) continue;
         
-        // Create 15-20 trees per cluster
-        const treesInCluster = 15 + Math.floor(Math.random() * 5);
+        const treesInCluster = qualitySettings.treesPerCluster + 
+            Math.floor(Math.random() * 5);
         
         for(let i = 0; i < treesInCluster; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 8; // Cluster radius
+            const radius = Math.random() * 8;
             const x = centerX + Math.cos(angle) * radius;
             const z = centerZ + Math.sin(angle) * radius;
             
-            // Only create tree if it's not in the clearing
             if (!isInClearing(x, z)) {
                 const scale = 0.6 + Math.random() * 1.2;
                 createTree(x, z, scale);
@@ -316,12 +308,12 @@ function createForest() {
         }
     }
 
-    // Add some scattered individual trees
-    for(let i = 0; i < 30; i++) {
+    // Add scattered trees
+    const scatteredTrees = isMobile ? 15 : 30;
+    for(let i = 0; i < scatteredTrees; i++) {
         const x = (Math.random() - 0.5) * 45;
         const z = (Math.random() - 0.5) * 45;
         
-        // Only create tree if it's not in the clearing
         if (!isInClearing(x, z)) {
             const scale = 0.7 + Math.random() * 1.0;
             createTree(x, z, scale);
@@ -334,7 +326,7 @@ createForest();
 
 // Add after scene setup
 const particles = [];
-const particleCount = 200;
+const particleCount = qualitySettings.particleCount;
 
 // Create floating 3D text
 function createFloatingText() {
@@ -358,12 +350,12 @@ function createFloatingText() {
             font: font,
             size: 1.2,
             height: 0.2,
-            curveSegments: 12,
+            curveSegments: isMobile ? 8 : 12,
             bevelEnabled: true,
             bevelThickness: 0.03,
             bevelSize: 0.02,
             bevelOffset: 0,
-            bevelSegments: 5
+            bevelSegments: isMobile ? 3 : 5
         });
 
         textGeometry.computeBoundingBox();
@@ -371,15 +363,15 @@ function createFloatingText() {
         
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         textMesh.position.x = centerOffset;
-        textMesh.position.y = 2;  // Position at half tree height
-        textMesh.position.z = 0;  // Centered in Z
+        textMesh.position.y = 2;
+        textMesh.position.z = 0;
         textMesh.castShadow = true;
         textMesh.receiveShadow = true;
         
         scene.add(textMesh);
 
-        // Enhanced sparkling particles
-        const particleCount = 1000;  // Increased from 500
+        // Create particles with mobile optimization
+        const particleCount = qualitySettings.particleCount;
         const particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
         
         for(let i = 0; i < particleCount; i++) {
@@ -395,21 +387,20 @@ function createFloatingText() {
 
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
             
-            // Position particles in a more contained volume around the text
             const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
             const textHeight = textGeometry.boundingBox.max.y - textGeometry.boundingBox.min.y;
             
             particle.position.x = centerOffset + (Math.random() * textWidth);
-            particle.position.y = 1.8 + Math.random() * textHeight;  // Keep particles closer to text
-            particle.position.z = -0.5 + Math.random() * 1;  // Thinner depth range
+            particle.position.y = 1.8 + Math.random() * textHeight;
+            particle.position.z = -0.5 + Math.random() * 1;
             
             particle.userData = {
                 originalY: particle.position.y,
                 originalX: particle.position.x,
                 originalZ: particle.position.z,
-                speed: 0.8 + Math.random() * 1.2,  // Slightly faster
+                speed: 0.8 + Math.random() * 1.2,
                 phase: Math.random() * Math.PI * 2,
-                amplitude: 0.1 + Math.random() * 0.15  // Smaller amplitude
+                amplitude: 0.1 + Math.random() * 0.15
             };
 
             particles.push(particle);
