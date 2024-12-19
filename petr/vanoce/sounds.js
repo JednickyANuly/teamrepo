@@ -6,19 +6,26 @@ export class SoundManager {
         this.sounds = {};
         this.backgroundMusic = null;
         this.loaded = false;
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.audioContext = null;
     }
 
     async loadSounds() {
+        // Create audio context on user interaction for mobile
+        if (this.isMobile && !this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.listener.context = this.audioContext;
+        }
+
         const audioLoader = new THREE.AudioLoader();
 
-        // Load background music with preservePitch option
+        // Load background music
         this.backgroundMusic = new THREE.Audio(this.listener);
         await new Promise(resolve => {
             audioLoader.load('sounds/jingle-bells.mp3', (buffer) => {
                 this.backgroundMusic.setBuffer(buffer);
                 this.backgroundMusic.setLoop(true);
                 this.backgroundMusic.setVolume(0.5);
-                // Enable pitch preservation (optional, depends on desired effect)
                 this.backgroundMusic.preservesPitch = false;
                 resolve();
             });
@@ -47,18 +54,24 @@ export class SoundManager {
     }
 
     startBackgroundMusic() {
+        if (this.isMobile && this.audioContext?.state === 'suspended') {
+            this.audioContext.resume();
+        }
+        
         if (this.loaded && this.backgroundMusic && !this.backgroundMusic.isPlaying) {
             this.backgroundMusic.play();
         }
     }
 
     play(soundName, offset = 0) {
+        if (this.isMobile && this.audioContext?.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
         if (this.sounds[soundName]) {
-            // Stop if already playing
             if (this.sounds[soundName].isPlaying) {
                 this.sounds[soundName].stop();
             }
-            // Play from offset
             this.sounds[soundName].offset = offset;
             this.sounds[soundName].play();
         }

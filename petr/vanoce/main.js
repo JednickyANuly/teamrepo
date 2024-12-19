@@ -34,6 +34,11 @@ class WinterScene {
         this.reindeerTurnSpeed = 0.02;
         this.musicSpeedFactor = 1.0;
         
+        // Add mobile controls properties
+        this.touchStartPos = null;
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.mobileControls = null;
+        
         this.init();
     }
 
@@ -90,6 +95,7 @@ class WinterScene {
         this.createTerrain();
         this.createSnowflakes();
         this.setupMovementControls();
+        this.createMobileControls();
         this.animate();
     }
 
@@ -667,6 +673,89 @@ class WinterScene {
                 reindeer.state = 'wandering';
             }
         });
+    }
+
+    createMobileControls() {
+        if (!this.isMobile) return;
+
+        const controlsDiv = document.createElement('div');
+        controlsDiv.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        `;
+
+        const shootBtn = document.createElement('button');
+        shootBtn.textContent = '🎯 Shoot';
+        shootBtn.style.cssText = `
+            padding: 15px 30px;
+            font-size: 20px;
+            background: rgba(255, 0, 0, 0.6);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            touch-action: manipulation;
+        `;
+        
+        const moveStick = document.createElement('div');
+        moveStick.style.cssText = `
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            touch-action: none;
+        `;
+
+        shootBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.shoot();
+        });
+
+        moveStick.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            this.touchStartPos = {
+                x: touch.clientX,
+                y: touch.clientY
+            };
+        });
+
+        moveStick.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!this.touchStartPos) return;
+
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - this.touchStartPos.x;
+            const deltaY = touch.clientY - this.touchStartPos.y;
+            
+            // Normalize deltas to -1 to 1 range
+            const maxDelta = 60;
+            this.moveLeft = deltaX < -10;
+            this.moveRight = deltaX > 10;
+            this.moveForward = deltaY < -10;
+            this.moveBackward = deltaY > 10;
+        });
+
+        moveStick.addEventListener('touchend', () => {
+            this.touchStartPos = null;
+            this.moveForward = false;
+            this.moveBackward = false;
+            this.moveLeft = false;
+            this.moveRight = false;
+        });
+
+        controlsDiv.appendChild(shootBtn);
+        document.body.appendChild(moveStick);
+        document.body.appendChild(controlsDiv);
+        
+        this.mobileControls = { controlsDiv, moveStick };
     }
 }
 
