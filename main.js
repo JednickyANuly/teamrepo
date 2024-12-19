@@ -15,8 +15,8 @@ const renderer = new THREE.WebGLRenderer({
     powerPreference: isMobile ? "low-power" : "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = !isMobile;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 // Update initial camera position
@@ -39,17 +39,19 @@ scene.add(ambientLight);
 // Main directional light (sun)
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(15, 15, 5);
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
-directionalLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
-directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = 50;
-directionalLight.shadow.camera.left = -25;
-directionalLight.shadow.camera.right = 25;
-directionalLight.shadow.camera.top = 25;
-directionalLight.shadow.camera.bottom = -25;
-directionalLight.shadow.radius = 3;
-directionalLight.shadow.bias = -0.001;
+directionalLight.castShadow = !isMobile;
+if (!isMobile) {
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
+    directionalLight.shadow.camera.left = -25;
+    directionalLight.shadow.camera.right = 25;
+    directionalLight.shadow.camera.top = 25;
+    directionalLight.shadow.camera.bottom = -25;
+    directionalLight.shadow.radius = 3;
+    directionalLight.shadow.bias = -0.001;
+}
 scene.add(directionalLight);
 
 // Replace the secondary light with a softer fill light
@@ -69,7 +71,7 @@ const groundMaterial = new THREE.MeshStandardMaterial({
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -2;
-ground.receiveShadow = true;
+ground.receiveShadow = !isMobile;
 scene.add(ground);
 
 // Snow particles
@@ -251,8 +253,8 @@ function createTree(x, z, scale = 1) {
     });
     const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
     trunk.position.set(x, -1.5, z);
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
+    trunk.castShadow = !isMobile;
+    trunk.receiveShadow = !isMobile;
 
     // Create 3 layers of leaves with different shades
     const leafColors = [
@@ -270,8 +272,8 @@ function createTree(x, z, scale = 1) {
         });
         const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
         leaf.position.y = i * 0.8;
-        leaf.castShadow = true;
-        leaf.receiveShadow = true;
+        leaf.castShadow = !isMobile;
+        leaf.receiveShadow = !isMobile;
         leaves.push(leaf);
         trunk.add(leaf);
     }
@@ -342,6 +344,9 @@ const particleCount = 200;
 
 // Create floating 3D text
 function createFloatingText() {
+    // Skip 3D text and particles on mobile
+    if (isMobile) return;
+
     const ttfLoader = new TTFLoader();
     const fontLoader = new FontLoader();
 
@@ -350,11 +355,11 @@ function createFloatingText() {
         
         const textMaterial = new THREE.MeshStandardMaterial({
             color: 0xffd700,
-            metalness: isMobile ? 0.5 : 1.0,
-            roughness: isMobile ? 0.5 : 0.1,
+            metalness: 1.0,
+            roughness: 0.1,
             emissive: 0xffd700,
             emissiveIntensity: 0.2,
-            envMapIntensity: isMobile ? 0.5 : 1.5
+            envMapIntensity: 1.5
         });
 
         const text = 'Veselé Vánoce a šťastný nový rok!';
@@ -362,12 +367,12 @@ function createFloatingText() {
             font: font,
             size: 1.2,
             height: 0.2,
-            curveSegments: isMobile ? 4 : 12,
-            bevelEnabled: !isMobile,
+            curveSegments: 12,
+            bevelEnabled: true,
             bevelThickness: 0.03,
             bevelSize: 0.02,
             bevelOffset: 0,
-            bevelSegments: isMobile ? 2 : 5
+            bevelSegments: 5
         });
 
         textGeometry.computeBoundingBox();
@@ -383,18 +388,18 @@ function createFloatingText() {
         scene.add(textMesh);
 
         // Enhanced sparkling particles
-        const particleCount = isMobile ? 200 : 1000;
-        const particleGeometry = new THREE.SphereGeometry(0.03, isMobile ? 4 : 8, isMobile ? 4 : 8);
+        const particleCount = 1000;
+        const particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
         
         for(let i = 0; i < particleCount; i++) {
             const particleMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffd700,
                 emissive: 0xffd700,
                 emissiveIntensity: 0.8,
-                metalness: isMobile ? 0.5 : 1,
-                roughness: isMobile ? 0.5 : 0,
-                transparent: !isMobile,
-                opacity: isMobile ? 1 : 0.8
+                metalness: 1,
+                roughness: 0,
+                transparent: true,
+                opacity: 0.8
             });
 
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
