@@ -40,6 +40,10 @@ const ctx = platno.getContext("2d");
 let poziceX = 0
 
 const kreslit = () => {
+  try {
+    
+
+    //if (!img1.complete || !img2.complete) return;
     ctx.clearRect(0, 0, platno.width, platno.height);
     //console.log('   ')
     ctx.drawImage(punch ? img1 : img2, 0,0,250,250);
@@ -52,8 +56,11 @@ if (keys["ArrowLeft"]) {
 if (keys["ArrowRight"]) {
     poziceX += 1
 }
-
+} catch (error) {
+    
+}
 requestAnimationFrame(kreslit)
+
 }
 
 requestAnimationFrame(kreslit)
