@@ -1,8 +1,28 @@
 // Objekt, který sleduje stav kláves
 let keys = {};
 
-//const img1 = fetch('batman-robin-1.jpg');
-//console.log(img1);
+const img1 = new Image();
+img1.src='batman-robin-1.jpg'
+const img2 = new Image();
+img2.src='batman-robin-2.jpg'
+const slapSound = new Audio();
+slapSound.src = 'slap.mp3'
+
+const slapCounterElement = document.querySelector('.slapcounter');
+let slaps = 0;
+
+let punch = false;
+const ondown = () => {
+  console.log('down')
+  punch = !punch;
+  let s2 = slapSound.cloneNode()
+  s2.play()
+  slaps = slaps + 1
+  slapCounterElement.innerHTML = slaps
+}
+window.addEventListener('pointerdown', ondown);
+
+
 
 // Funkce, která se spustí při stisknutí klávesy
 window.addEventListener("keydown", function(event) {
@@ -22,8 +42,9 @@ let poziceX = 0
 const kreslit = () => {
     ctx.clearRect(0, 0, platno.width, platno.height);
     //console.log('   ')
+    ctx.drawImage(punch ? img1 : img2, 0,0,250,250);
 ctx.fillStyle = "blue";
-ctx.fillRect(poziceX, 0, 150, 200);
+//ctx.fillRect(poziceX, 0, 150, 200);
 
 if (keys["ArrowLeft"]) {
     poziceX -= 1
